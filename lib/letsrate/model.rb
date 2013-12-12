@@ -5,15 +5,19 @@ module Letsrate
   def rate(stars, user, dimension=nil)
     dimension = nil if dimension.blank?
 
-    if can_rate? user, dimension
+    rate = user_rate(user, dimension)
+
+    if rate.nil?
       rates(dimension).create! do |r|
         r.stars = stars
         r.rater = user
       end
-      update_rate_average(stars, dimension)
     else
-      raise "User has already rated."
+      rate.stars = stars
+      rate.save!(validate: false)
     end
+
+    update_rate_average(stars, dimension)
   end
 
   def update_rate_average(stars, dimension=nil)
@@ -39,6 +43,10 @@ module Letsrate
 
   def can_rate?(user, dimension=nil)
     user.ratings_given.where(dimension: dimension, rateable_id: id, rateable_type: self.class.name).size.zero?
+  end
+
+  def user_rate(user, dimension=nil)
+    user.ratings_given.where(dimension: dimension, rateable_id: id, rateable_type: self.class.name).first
   end
 
   def rates(dimension=nil)
